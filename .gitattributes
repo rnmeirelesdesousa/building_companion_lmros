@@ -4,3 +4,7 @@
 # Explicitly force shell scripts to always use Linux (LF) line endings.
 # This is critical for compatibility with Docker/Linux.
 *.sh eol=lf
+
+# Explicitly force Jupyter notebooks to always use Linux (LF) line endings
+# for consistency with the Docker environment.
+*.ipynb eol=lf

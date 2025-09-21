@@ -1,33 +1,54 @@
 services:
+  # 1. MLflow Service for Experiment Tracking & Model Registry
   mlflow:
     image: ghcr.io/mlflow/mlflow:v3.3.1
-    container_name: mlflow_server
+    container_name: mlflow_server_legal
     ports:
       - "5001:5000"
     volumes:
-      - ../db:/mlflow/db            # Database location
-      - ../artifacts:/artifacts     # Separate location for artifacts
+      - ../db:/mlflow/db            # Database location for metadata
+      - ../artifacts:/artifacts     # Location for model artifacts
       - ./init-mlflow.sh:/init-mlflow.sh
     restart: always
-    user: "0:0"  # Run as root
+    user: "0:0"  # Run as root to manage permissions
     environment:
       - MLFLOW_BACKEND_STORE_URI=sqlite:////mlflow/db/mlflow.db
       - MLFLOW_DEFAULT_ARTIFACT_ROOT=/artifacts
     command: ["bash", "/init-mlflow.sh"]
 
+  # 2. JupyterLab Service for Interactive Development
   jupyter:
-    image: jupyter/scipy-notebook:latest
+    image: jupyter/scipy-notebook:latest # Using a data science-ready image
     container_name: jupyter_lab_legal
     ports:
-      - "8889:8888"
+      - "8889:8888" # Using port 8889 to avoid conflicts
     volumes:
-      - ../notebooks:/home/jovyan/work
-      - ../data:/home/jovyan/work/data
-      - ../artifacts:/home/jovyan/work/artifacts
+      - ../:/home/jovyan/work # Mount the entire project folder
+      - ../artifacts:/artifacts # Specific access to artifacts
     environment:
       - JUPYTER_ENABLE_LAB=yes
-      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - MLFLOW_TRACKING_URI=http://mlflow:5000 # Connect to our MLflow service
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
+      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
     restart: always
     command: start-notebook.sh --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_root=True
     depends_on:
       - mlflow
+
+  # 3. Flask API Service for the Legal Chatbot
+  legal_chatbot_api:
+    container_name: legal_api
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../artifacts:/app/artifacts  # <-- ONLY mount artifacts, not the whole project
+    depends_on:
+      - mlflow
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    env_file:
+      - ../.env
+    restart: always # Added for stability

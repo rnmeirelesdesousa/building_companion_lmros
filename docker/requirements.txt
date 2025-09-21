@@ -1,0 +1,19 @@
+# MLOps and Infrastructure
+mlflow==3.3.1
+fastapi
+uvicorn
+python-dotenv
+
+# LLM and RAG
+langchain
+langchain-community
+langchain-openai
+faiss-cpu
+sentence-transformers
+PyMuPDF
+
+# Utilities
+pandas
+numpy
+requests
+unidecode
